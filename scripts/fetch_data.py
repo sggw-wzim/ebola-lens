@@ -21,36 +21,39 @@ DZIS = datetime.now().strftime("%Y-%m-%d")
 def pobierz_dane_hdx():
     """
     ŹRÓDŁO 1: UN OCHA Humanitarian Data Exchange (HDX)
-    Pobiera oficjalny zbiór danych dla Demokratycznej Republiki Konga przez stabilne API.
+    Wyszukuje pakiet dynamicznie za pomocą oficjalnego API wyszukiwania i pobiera plik CSV.
     """
     print("[1/3] Pobieranie rzeczywistych danych z Humanitarian Data Exchange (HDX)...")
     
-    # Oficjalny endpoint metadanych datasetu Eboli w DRK w serwisie HDX
-    api_url = "https://data.humdata.org/api/3/action/package_show?id=drc-ebola-outbreak"
+    # Używamy endpointu wyszukiwania, który jest odporny na zmiany sztywnych ID
+    search_url = "https://data.humdata.org/api/3/action/package_search"
+    params = {"q": "ebola drc", "rows": 1}
     sciezka_pliku = os.path.join(BRONZE_DIR, f"hdx_ebola_drc_{DZIS}.csv")
     
-    odpowiedz = requests.get(api_url, timeout=30)
-    odpowiedz.raise_for_status() # W razie błędu serwera natychmiast przerywa działanie
+    response = requests.get(search_url, params=params, timeout=30)
+    response.raise_for_status()
     
-    dane_api = odpowiedz.json()
-    zasoby = dane_api.get("result", {}).get("resources", [])
-    
-    # Wyszukujemy bezpośredni link do pliku CSV wewnątrz pakietu
+    results = response.json().get("result", {}).get("results", [])
+    if not results:
+        raise ValueError("Nie znaleziono żadnych pakietów pasujących do zapytania o Ebolę w DRK w serwisie HDX.")
+        
+    # Pobieramy zasoby z pierwszego pasującego i najbardziej trafnego datasetu
+    resources = results[0].get("resources", [])
     csv_url = None
-    for zasob in zasoby:
-        if zasob.get("format", "").upper() == "CSV":
-            csv_url = zasob.get("download_url") or zasob.get("url")
+    for res in resources:
+        if res.get("format", "").upper() == "CSV":
+            csv_url = res.get("download_url") or res.get("url")
             break
             
     if not csv_url:
-        raise ValueError("Krytyczny błąd: Nie znaleziono zasobu CSV w oficjalnym pakiecie HDX dla Eboli w DRK.")
+        raise ValueError("Znaleziono dataset na HDX, ale nie zawiera on zasobu w formacie CSV.")
         
-    print(f"  -> Pobieranie pliku z adresu: {csv_url}")
-    plik_csv = requests.get(csv_url, timeout=45)
-    plik_csv.raise_for_status()
+    print(f"  -> Znaleziono autentyczny adres CSV: {csv_url}")
+    csv_resp = requests.get(csv_url, timeout=45)
+    csv_resp.raise_for_status()
     
     with open(sciezka_pliku, "w", encoding="utf-8") as f:
-        f.write(plik_csv.text)
+        f.write(csv_resp.text)
     print(f"  -> Sukces! Zapisano autentyczny plik HDX: {sciezka_pliku}")
 
 
