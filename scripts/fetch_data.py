@@ -21,11 +21,10 @@ DZIS = datetime.now().strftime("%Y-%m-%d")
 def pobierz_dane_hdx():
     """
     ŹRÓDŁO 1: UN OCHA Humanitarian Data Exchange (HDX)
-    Wyszukuje pakiet dynamicznie za pomocą oficjalnego API wyszukiwania i pobiera plik CSV.
+    Elastyczne wyszukiwanie i pobieranie pierwszego dostępnego pliku danych z pakietu.
     """
     print("[1/3] Pobieranie rzeczywistych danych z Humanitarian Data Exchange (HDX)...")
     
-    # Używamy endpointu wyszukiwania, który jest odporny na zmiany sztywnych ID
     search_url = "https://data.humdata.org/api/3/action/package_search"
     params = {"q": "ebola drc", "rows": 1}
     sciezka_pliku = os.path.join(BRONZE_DIR, f"hdx_ebola_drc_{DZIS}.csv")
@@ -37,23 +36,32 @@ def pobierz_dane_hdx():
     if not results:
         raise ValueError("Nie znaleziono żadnych pakietów pasujących do zapytania o Ebolę w DRK w serwisie HDX.")
         
-    # Pobieramy zasoby z pierwszego pasującego i najbardziej trafnego datasetu
     resources = results[0].get("resources", [])
-    csv_url = None
+    if not resources:
+        raise ValueError("Znaleziono dataset na HDX, ale lista zasobów (resources) jest pusta.")
+        
+    # Szukamy najpierw pliku CSV, a jeśli nie ma, bierzemy pierwszy z brzegu plik danych (np. XLSX lub ZIP/API)
+    docelowy_zasob = None
     for res in resources:
-        if res.get("format", "").upper() == "CSV":
-            csv_url = res.get("download_url") or res.get("url")
+        format_pliku = res.get("format", "").upper()
+        if "CSV" in format_pliku or "XLS" in format_pliku or "DATA" in format_pliku:
+            docelowy_zasob = res
             break
             
-    if not csv_url:
-        raise ValueError("Znaleziono dataset na HDX, ale nie zawiera on zasobu w formacie CSV.")
+    # Jeśli nadal brak dopasowania po formacie, bierzemy po prostu pierwszy zasób z listy
+    if not docelowy_zasob:
+        docelowy_zasob = resources[0]
         
-    print(f"  -> Znaleziono autentyczny adres CSV: {csv_url}")
-    csv_resp = requests.get(csv_url, timeout=45)
-    csv_resp.raise_for_status()
+    data_url = docelowy_zasob.get("download_url") or docelowy_zasob.get("url")
+    if not data_url:
+        raise ValueError("Wybrany zasób HDX nie posiada adresu URL do pobrania.")
+        
+    print(f"  -> Pobieranie pliku z HDX (format: {docelowy_zasob.get('format')}): {data_url}")
+    file_resp = requests.get(data_url, timeout=45)
+    file_resp.raise_for_status()
     
     with open(sciezka_pliku, "w", encoding="utf-8") as f:
-        f.write(csv_resp.text)
+        f.write(file_resp.text)
     print(f"  -> Sukces! Zapisano autentyczny plik HDX: {sciezka_pliku}")
 
 
