@@ -30,3 +30,35 @@ To ensure data integrity, reproducibility, and clean collaborative workflows, th
 │   ├── zespol_2_grafy/      # Student Team 2: Network & Graph Analysis
 │   └── zespol_3_logistyka/  # Student Team 3: Predictive Modeling & Logistics
 └── README.md
+
+Workflow & Environment (Google Colab + GitHub)
+
+To accommodate restricted laboratory environments without local administrative privileges, all computational work is executed via Google Colab in the browser.
+1. Reading Data into Colab
+
+Students can seamlessly ingest the latest data directly into their notebooks without local Git installation:
+
+```python
+import pandas as pd
+
+url = "[https://raw.githubusercontent.com/sggw-wzim/projekt-nadzieja-ebola/main/data/01_bronze_raw/your_data_file.csv](https://raw.githubusercontent.com/sggw-wzim/projekt-nadzieja-ebola/main/data/01_bronze_raw/your_data_file.csv)"
+df = pd.read_csv(url)
+print(df.head())
+
+2. Saving Work
+
+    Notebooks (.ipynb): Saved directly back to the student team's designated workspace folder via Colab's GitHub integration (File -> Save a copy in GitHub).
+
+    Artifacts/Results (CSV): Uploaded manually via the GitHub web interface into the respective workspace or gold layer.
+
+Data Sources
+
+The project aggregates public, open-source data from verified international bodies:
+
+    UN OCHA Humanitarian Data Exchange (HDX): Geographic boundaries, conflict zones, and baseline humanitarian datasets.
+
+    World Health Organization (WHO) / Africa CDC: Disease outbreak news, surveillance reports, and epidemiological updates.
+
+Open Science & Mission Impact
+
+In alignment with Open Science principles, all cleaned datasets, analytical pipelines, and visualization notebooks are published openly. At the conclusion of the academic cycle, synthesized technical summaries and risk models are designed to be shared with humanitarian actors operating in the field.
